@@ -1,0 +1,8 @@
+# 编译产物：目标文件
+*.o
+
+# 编辑器配置目录
+.vscode/
+
+# Docker 数据目录
+docker-data/
