@@ -4,6 +4,7 @@
 #include "index_factory.h"
 #include "logger.h"
 #include "constants.h"
+#include <cstdlib>
 #include <iostream>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
@@ -47,6 +48,10 @@ HttpServer::HttpServer(const std::string& host, int port, VectorDatabase* vector
     server.Get("/admin/getNode", [this](const httplib::Request& req, httplib::Response& res) {
         getNodeHandler(req, res);
     });      
+    // 查询 RocksDB 标量：参数 key_prefix、key（上界含）、page_num、page_size，迭代器按范围分页。
+    server.Get("/admin/getScalar", [this](const httplib::Request& req, httplib::Response& res) {
+        getScalarHandler(req, res);
+    });
 }
 
 
@@ -443,6 +448,69 @@ void HttpServer::getNodeHandler(const httplib::Request& req, httplib::Response& 
     json_response.AddMember("node", node_object, allocator);
 
     // 设置响应
+    json_response.AddMember(RESPONSE_RETCODE, RESPONSE_RETCODE_SUCCESS, allocator);
+    setJsonResponse(json_response, res);
+}
+
+void HttpServer::getScalarHandler(const httplib::Request& req, httplib::Response& res) {
+    GlobalLogger->debug("Received getScalar request");
+
+    // 查询参数：key_prefix key 前缀；key 上界（字典序含）；page_num 页码从 1 起；page_size 每页条数（默认 100，最大 1000）
+    std::string key_prefix = req.get_param_value("key_prefix");
+    std::string key_upper = req.get_param_value("key");
+    std::string page_num_str = req.get_param_value("page_num");
+    std::string page_size_str = req.get_param_value("page_size");
+
+    size_t page_num = 1;
+    if (!page_num_str.empty()) {
+        char* end_ptr = nullptr;
+        unsigned long v = std::strtoul(page_num_str.c_str(), &end_ptr, 10);
+        if (end_ptr == page_num_str.c_str() || *end_ptr != '\0' || v == 0 || v > 1000000) {
+            GlobalLogger->error("Invalid page_num parameter: {}", page_num_str);
+            res.status = 400;
+            setErrorJsonResponse(res, RESPONSE_RETCODE_ERROR, "Invalid page_num parameter");
+            return;
+        }
+        page_num = static_cast<size_t>(v);
+    }
+
+    size_t page_size = 100;
+    if (!page_size_str.empty()) {
+        char* end_ptr = nullptr;
+        unsigned long v = std::strtoul(page_size_str.c_str(), &end_ptr, 10);
+        if (end_ptr == page_size_str.c_str() || *end_ptr != '\0' || v == 0 || v > 1000) {
+            GlobalLogger->error("Invalid page_size parameter: {}", page_size_str);
+            res.status = 400;
+            setErrorJsonResponse(res, RESPONSE_RETCODE_ERROR, "Invalid page_size parameter");
+            return;
+        }
+        page_size = static_cast<size_t>(v);
+    }
+
+    ScalarKvPage page = vector_database_->getScalarsPage(key_prefix, key_upper, page_num, page_size);
+
+    rapidjson::Document json_response;
+    json_response.SetObject();
+    rapidjson::Document::AllocatorType& allocator = json_response.GetAllocator();
+
+    rapidjson::Value items(rapidjson::kArrayType);
+    for (const auto& kv : page.items) {
+        rapidjson::Value item(rapidjson::kObjectType);
+        item.AddMember("key", rapidjson::Value(kv.first.c_str(), allocator), allocator);
+        rapidjson::Document data_doc;
+        data_doc.Parse(kv.second.c_str());
+        if (data_doc.IsObject()) {
+            rapidjson::Value data_val(data_doc, allocator);
+            item.AddMember("data", data_val, allocator);
+        } else {
+            item.AddMember("data", rapidjson::Value(rapidjson::kNullType), allocator);
+        }
+        items.PushBack(item, allocator);
+    }
+    json_response.AddMember("items", items, allocator);
+    json_response.AddMember("hasMore", page.has_more, allocator);
+    json_response.AddMember("pageNum", static_cast<uint64_t>(page_num), allocator);
+    json_response.AddMember("pageSize", static_cast<uint64_t>(page_size), allocator);
     json_response.AddMember(RESPONSE_RETCODE, RESPONSE_RETCODE_SUCCESS, allocator);
     setJsonResponse(json_response, res);
 }

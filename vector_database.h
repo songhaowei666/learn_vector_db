@@ -22,6 +22,7 @@ public:
     void takeSnapshot(); // 添加 takeSnapshot 方法声明
     IndexFactory::IndexType getIndexTypeFromRequest(const rapidjson::Document& json_request); // 将 getIndexTypeFromRequest 方法设为 public
     int64_t getStartIndexID() const; // 添加 getStartIndexID 函数声明
+    ScalarKvPage getScalarsPage(const std::string& key_prefix, const std::string& key, size_t page_num, size_t page_size); // 分页扫描标量 RocksDB
 
 private:
     ScalarStorage scalar_storage_;

@@ -237,3 +237,7 @@ void VectorDatabase::takeSnapshot() { // 添加 takeSnapshot 方法实现
 int64_t VectorDatabase::getStartIndexID() const {
     return persistence_.getID(); // 通过调用 persistence_ 的 GetID 方法获取起始索引 ID
 }
+
+ScalarKvPage VectorDatabase::getScalarsPage(const std::string& key_prefix, const std::string& key, size_t page_num, size_t page_size) {
+    return scalar_storage_.scan_page(key_prefix, key, page_num, page_size);
+}

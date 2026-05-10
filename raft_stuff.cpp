@@ -5,7 +5,7 @@ RaftStuff::RaftStuff(int node_id, const std::string& endpoint, int port, VectorD
     : node_id(node_id), endpoint(endpoint), port_(port), vector_database_(vector_database) { // 初始化 vector_database_ 指针
     Init();
 }
-
+// 初始化 raft  创建状态管理器  创建状态引擎   
 void RaftStuff::Init() {
     smgr_ = cs_new<inmem_state_mgr>(node_id, endpoint, vector_database_);
     sm_ = cs_new<log_state_machine>();
@@ -19,8 +19,9 @@ void RaftStuff::Init() {
     asio_opt.thread_pool_size_ = 1;
 
     raft_params params;
-    params.election_timeout_lower_bound_ = 100000000; // 设置为一个非常大的值
-    params.election_timeout_upper_bound_ = 200000000; // 设置为一个非常大的值
+    // 选举超时（毫秒），与 enableElectionTimeout(10000, 20000) 一致，单机启动后可尽快选主
+    params.election_timeout_lower_bound_ = 10000;
+    params.election_timeout_upper_bound_ = 20000;
 
     // Logger.
     std::string log_file_name = "./srv.log";
@@ -68,7 +69,7 @@ ptr< cmd_result< ptr<buffer> > > RaftStuff::appendEntries(const std::string& ent
     // 将日志条目追加到 Raft 实例中
     return raft_instance_->append_entries({log_entry_buffer});
 }
-
+// 设置选举超时时间
 void RaftStuff::enableElectionTimeout(int lower_bound, int upper_bound) {
     if (raft_instance_) {
         raft_params params = raft_instance_->get_current_params();
@@ -77,7 +78,7 @@ void RaftStuff::enableElectionTimeout(int lower_bound, int upper_bound) {
         raft_instance_->update_params(params);
     }
 }
-
+// 判断当前节点是否为leader
 bool RaftStuff::isLeader() const {
     if (!raft_instance_) {
         return false;

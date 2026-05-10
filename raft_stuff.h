@@ -5,7 +5,7 @@
 #include "vector_database.h" // 包含 VectorDatabase 类的头文件
 #include <libnuraft/asio_service.hxx>
 #include "logger.h" // 包含 logger.h 以使用日志记录器
-
+//  raft的封装  
 class RaftStuff {
 public:
     RaftStuff(int node_id, const std::string& endpoint, int port, VectorDatabase* vector_database); // 添加 VectorDatabase 指针参数

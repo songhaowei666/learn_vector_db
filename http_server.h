@@ -30,6 +30,7 @@ private:
     void addFollowerHandler(const httplib::Request& req, httplib::Response& res); // 添加 addFollowerHandler 方法声明
     void listNodeHandler(const httplib::Request& req, httplib::Response& res); // 添加 listNodeHandler 函数声明
     void getNodeHandler(const httplib::Request& req, httplib::Response& res); // 添加 listNodeHandler 函数声明
+    void getScalarHandler(const httplib::Request& req, httplib::Response& res); // 分页查询标量存储
     void setJsonResponse(const rapidjson::Document& json_response, httplib::Response& res);
     void setErrorJsonResponse(httplib::Response& res, int error_code, const std::string& errorMsg); 
     bool isRequestValid(const rapidjson::Document& json_request, CheckType check_type);

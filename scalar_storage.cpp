@@ -4,6 +4,7 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h> // 包含rapidjson/stringbuffer.h头文件
 #include <rapidjson/writer.h>
+#include <memory>
 #include <vector>
 
 ScalarStorage::ScalarStorage(const std::string& db_path) {
@@ -66,4 +67,57 @@ std::string ScalarStorage::get(const std::string& key) {
         return "";
     }
     return value;
+}
+
+ScalarKvPage ScalarStorage::scan_page(const std::string& key_prefix, const std::string& key_upper, size_t page_num, size_t page_size) {
+    ScalarKvPage page;
+    if (page_size == 0 || page_num == 0) {
+        return page;
+    }
+
+    auto key_in_range = [&](const std::string& k) -> bool {
+        if (!key_prefix.empty()) {
+            if (k.size() < key_prefix.size() || k.compare(0, key_prefix.size(), key_prefix) != 0) {
+                return false;
+            }
+        }
+        if (!key_upper.empty() && k > key_upper) {
+            return false;
+        }
+        return true;
+    };
+
+    std::unique_ptr<rocksdb::Iterator> it(db_->NewIterator(rocksdb::ReadOptions()));
+    if (!key_prefix.empty()) {
+        it->Seek(key_prefix);
+    } else {
+        it->SeekToFirst();
+    }
+
+    size_t skip = (page_num - 1) * page_size;
+    while (it->Valid()) {
+        std::string k = it->key().ToString();
+        if (!key_in_range(k)) {
+            break;
+        }
+        if (skip > 0) {
+            --skip;
+            it->Next();
+            continue;
+        }
+        if (page.items.size() < page_size) {
+            page.items.emplace_back(std::move(k), it->value().ToString());
+            it->Next();
+            continue;
+        }
+        page.has_more = true;
+        break;
+    }
+
+    if (page.items.size() == page_size && !page.has_more && it->Valid()) {
+        std::string k = it->key().ToString();
+        page.has_more = key_in_range(k);
+    }
+
+    return page;
 }

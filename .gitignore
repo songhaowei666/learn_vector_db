@@ -1,8 +1,16 @@
 # 编译产物：目标文件
 *.o
 
+# 日志文件
+*.log
+
 # 编辑器配置目录
 .vscode/
 
 # Docker 数据目录
 docker-data/
+
+# 运行时数据：RocksDB 标量库、WAL（WALStorage 当前为文件，无尾斜杠以同时匹配日后若为目录）
+ScalarStorage/
+WALStorage
+vdb_server
