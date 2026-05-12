@@ -9,6 +9,8 @@
 #include <fstream> // 包含 <fstream> 以使用 std::ifstream
 #include <limits>
 
+extern "C" bool roaring_bitmap_contains(const roaring_bitmap_t* r, uint32_t val);
+
 
 // bool RoaringBitmapIDSelector::is_member(int64_t id) const {
 //     return roaring_bitmap_contains(bitmap_, static_cast<uint32_t>(id));

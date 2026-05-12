@@ -42,6 +42,7 @@ AR := ar
 
 # Include directories（libnuraft 头文件 + 独立 Asio 头文件）
 INCLUDES = -I ./hnswlib \
+	-I ./third_party/annoy/src \
 	-I $(NURAFT_ROOT)/include \
 	-I $(NURAFT_ROOT)/asio/asio/include
 
@@ -56,7 +57,7 @@ TARGET = vdb_server
 
 # 源文件
 SOURCES = vdb_server.cpp faiss_index.cpp http_server.cpp index_factory.cpp logger.cpp \
-hnswlib_index.cpp scalar_storage.cpp vector_database.cpp filter_index.cpp persistence.cpp \
+hnswlib_index.cpp annoy_index.cpp scalar_storage.cpp vector_database.cpp filter_index.cpp persistence.cpp \
 in_memory_log_store.cpp log_state_machine.cpp raft_stuff.cpp raft_logger.cpp
 
 # 对象文件

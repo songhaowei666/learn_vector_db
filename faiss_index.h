@@ -4,8 +4,9 @@
 #include <faiss/utils/utils.h>
 // FAISS 1.7.x：IDSelector 定义在 AuxIndexStructures.h（无独立 IDSelector.h）
 #include <faiss/impl/AuxIndexStructures.h>
-#include "roaring/roaring.h"
 #include <vector>
+
+typedef struct roaring_bitmap_s roaring_bitmap_t;
 
 // 定义 RoaringBitmapIDSelector 结构体
 struct RoaringBitmapIDSelector : faiss::IDSelector {

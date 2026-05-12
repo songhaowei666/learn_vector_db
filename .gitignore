@@ -14,3 +14,5 @@ docker-data/
 ScalarStorage/
 WALStorage
 vdb_server
+.clangd
+compile_commands.json
