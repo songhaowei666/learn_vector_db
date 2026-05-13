@@ -1,0 +1,9 @@
+
+测试 p99延迟   平均延迟   系统吞吐量   召回率
+./vector_db_test /home/song/github_clone/learn_vector_db/tests/conf.ini
+
+[2026-05-13 20:11:48.444] [info] Average duration: 0.43983651430000154 milliseconds
+[2026-05-13 20:11:48.444] [info] P99 duration: 1.958496 milliseconds
+[2026-05-13 20:11:48.444] [info] Throughput: 2273.5720375364854 operations per second
+[2026-05-13 20:11:48.444] [info] Overall recall rate: 0.04958000000000001
+[2026-05-13 20:11:48.453] [info] Benchmark test completed

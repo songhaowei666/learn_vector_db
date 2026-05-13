@@ -5,8 +5,9 @@
 #include <string>
 #include <set>
 #include <memory> // 包含 <memory> 以使用 std::shared_ptr
-#include "roaring/roaring.h"
 #include "scalar_storage.h" // 包含 scalar_storage.h 以使用 ScalarStorage 类
+
+typedef struct roaring_bitmap_s roaring_bitmap_t;
 
 class FilterIndex {
 public:

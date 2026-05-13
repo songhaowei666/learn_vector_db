@@ -1,6 +1,6 @@
 # 研究向量数据库
 
-使用了很久的向量数据库，总想研究下它的原理。本仓库是一个面向学习的迷你向量库服务：用 **Faiss / hnswlib** 做近似检索，用 **RocksDB** 存标量与元数据，用 **NuRaft** 做多副本一致性，对外暴露 **HTTP JSON** 接口。
+使用了很久的向量数据库，总想研究下它的原理。本仓库是一个面向学习的迷你向量库服务：用 **Faiss / hnswlib / Annoy** 做向量检索实验，用 **RocksDB** 存标量与元数据，用 **NuRaft** 做多副本一致性，对外暴露 **HTTP JSON** 接口。
 
 ---
 
@@ -9,6 +9,7 @@
 - **FLAT**：基于 Faiss 的精确暴力检索（`IndexFactory::IndexType::FLAT`）。
 - **HNSW**：基于 hnswlib 的图索引（`IndexFactory::IndexType::HNSW`），适合更大规模近似检索。
 - **FILTER**：整型字段过滤索引（`FilterIndex`），内部用 **Roaring Bitmap** 维护「字段值 → 文档 id 集合」，与向量检索组合做标量过滤。
+- **ANNOY（实验中）**：已引入 `annoy_index.cpp` 与 Annoy 头文件依赖，当前用于独立索引能力验证（插入、查询、保存、加载）。
 - 索引由 `IndexFactory` 统一管理，可与快照流程一起 **save / load** 到磁盘（与标量存储协同）。
 
 ---
@@ -58,6 +59,8 @@
 
 系统需安装开发包（名称因发行版略有差异），链接阶段依赖包括但不限于：**Faiss、OpenBLAS、RocksDB、CRoaring、spdlog、fmt、OpenSSL、zlib**，以及 **NuRaft**（见子模块说明）。
 
+Annoy 在本项目中以 **header-only** 方式使用，头文件位于 `third_party/annoy/src/`（`annoylib.h`、`kissrandom.h`、`mman.h`）。
+
 首次拉取 NuRaft 与子模块：
 
 ```bash
@@ -68,6 +71,15 @@ make clean && make
 ```
 
 若本机有 `cmake`，会优先用 CMake 构建 `libnuraft.a`；否则 makefile 会用 g++ 按 NuRaft 核心源码列表手动编译静态库。
+
+Annoy 头文件下载（网络不稳定时可单独执行）：
+
+```bash
+mkdir -p third_party/annoy/src
+curl -L "https://raw.githubusercontent.com/spotify/annoy/master/src/annoylib.h" -o "third_party/annoy/src/annoylib.h"
+curl -L "https://raw.githubusercontent.com/spotify/annoy/master/src/kissrandom.h" -o "third_party/annoy/src/kissrandom.h"
+curl -L "https://raw.githubusercontent.com/spotify/annoy/master/src/mman.h" -o "third_party/annoy/src/mman.h"
+```
 
 ---
 
@@ -81,6 +93,31 @@ make clean && make
 
 ---
 
+## 测试与压测
+
+`tests/benchmark.cpp` 提供一个 HTTP 压测程序，用于验证写入、检索以及写入后检索的混合场景。测试前需先启动 `vdb_server`，并确保 `tests/conf.ini` 中的 `write_url`、`read_url` 指向当前服务地址。
+
+```bash
+cd tests
+make
+./vector_db_test ./conf.ini
+```
+
+`tests/conf.ini` 中主要参数如下：
+
+| 参数 | 说明 |
+|------|------|
+| `test_type` | `0` 表示写入测试，`1` 表示读取测试，`2` 表示先写入再读取并计算召回率 |
+| `num_threads` | 并发线程数 |
+| `num_vectors` | 生成的请求数量 |
+| `dim` | 向量维度 |
+| `write_url` | 写入接口地址，默认示例为 `/upsert` |
+| `read_url` | 查询接口地址，默认示例为 `/search` |
+
+压测输出包括平均延迟、P99 延迟、系统吞吐量；当 `test_type=2` 时，还会输出整体召回率。示例输出记录见 `tests/记录.txt`。
+
+---
+
 ## 仓库主要源码
 
 | 模块 | 说明 |
@@ -88,7 +125,7 @@ make clean && make
 | `vdb_server.cpp` | 入口：读配置、初始化索引工厂、向量库、Raft、HTTP 服务 |
 | `vector_database.*` | 向量与标量协同、WAL、快照、检索入口 |
 | `scalar_storage.*` | RocksDB 标量层 |
-| `index_factory.*`、`faiss_index.*`、`hnswlib_index.*`、`filter_index.*` | 索引类型与持久化 |
+| `index_factory.*`、`faiss_index.*`、`hnswlib_index.*`、`annoy_index.cpp`、`filter_index.*` | 索引类型与持久化 |
 | `persistence.*` | WAL 与快照相关 |
 | `raft_stuff.*`、`log_state_machine.*` 等 | Raft 集成 |
 | `http_server.*` | HTTP 路由与 JSON 处理 |

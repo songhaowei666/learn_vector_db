@@ -1,9 +1,21 @@
 #include "filter_index.h"
 #include "logger.h" // 包含 logger.h 以使用日志记录器
+#include <cstddef>
+#include <cstdint>
 #include <algorithm>
 #include <set>
 #include <memory>
 #include <sstream>
+
+extern "C" {
+roaring_bitmap_t* roaring_bitmap_create(void);
+void roaring_bitmap_add(roaring_bitmap_t* r, uint32_t x);
+void roaring_bitmap_remove(roaring_bitmap_t* r, uint32_t x);
+void roaring_bitmap_or_inplace(roaring_bitmap_t* x1, const roaring_bitmap_t* x2);
+roaring_bitmap_t* roaring_bitmap_portable_deserialize(const char* buf);
+size_t roaring_bitmap_portable_size_in_bytes(const roaring_bitmap_t* ra);
+size_t roaring_bitmap_portable_serialize(const roaring_bitmap_t* ra, char* buf);
+}
 
 
 FilterIndex::FilterIndex() {}
