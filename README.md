@@ -95,6 +95,8 @@ curl -L "https://raw.githubusercontent.com/spotify/annoy/master/src/mman.h" -o "
 
 ## 测试与压测
 
+### HTTP 压测（依赖已启动的 vdb_server）
+
 `tests/benchmark.cpp` 提供一个 HTTP 压测程序，用于验证写入、检索以及写入后检索的混合场景。测试前需先启动 `vdb_server`，并确保 `tests/conf.ini` 中的 `write_url`、`read_url` 指向当前服务地址。
 
 ```bash
@@ -115,6 +117,23 @@ make
 | `read_url` | 查询接口地址，默认示例为 `/search` |
 
 压测输出包括平均延迟、P99 延迟、系统吞吐量；当 `test_type=2` 时，还会输出整体召回率。示例输出记录见 `tests/记录.txt`。
+
+### 单机内存基准（不启动 vdb_server）
+
+在 `tests` 目录下编译并运行，用于观察 **128 维、100 万条** 向量插入前后进程的 **VmRSS / VmHWM**（读取 `/proc/self/status`）。依赖本机已安装 **spdlog、fmt、CRoaring** 等与主工程一致的开发库。
+
+| Makefile 目标 | 源文件 | 说明 |
+|-----------------|--------|------|
+| `annoy_mem_bench` | `benchmark_annoy_memory.cpp` + `annoy_index.cpp`、`logger.cpp` | 使用封装类 `AnnoyIndex`：插入 100 万条后采样内存，再 `search_vectors` 触发与线上一致的 `build`。 |
+| `hnsw_mem_bench` | `benchmark_hnsw_memory.cpp` + `hnswlib_index.cpp`、`logger.cpp` | 使用 `HNSWLibIndex`（默认 `M=16`、`ef_construction=200`）：插入 100 万条后采样，再执行一次 `search_vectors`。 |
+
+```bash
+cd tests
+make annoy_mem_bench && ./annoy_mem_bench
+make hnsw_mem_bench && ./hnsw_mem_bench
+```
+
+`make clean` 会删除 `vector_db_test`、`annoy_mem_bench`、`hnsw_mem_bench`。
 
 ---
 
