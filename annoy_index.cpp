@@ -1,3 +1,4 @@
+#include "annoy_index.h"
 #include "logger.h"
 #include "third_party/annoy/src/annoylib.h"
 #include "third_party/annoy/src/kissrandom.h"
@@ -12,7 +13,6 @@
 #include <utility>
 #include <vector>
 
-typedef struct roaring_bitmap_s roaring_bitmap_t;
 extern "C" bool roaring_bitmap_contains(const roaring_bitmap_t* r, uint32_t val);
 
 namespace {
@@ -30,19 +30,48 @@ using AnnoyIPIndex = Annoy::AnnoyIndex<
     Annoy::AnnoyIndexSingleThreadedBuildPolicy>;
 }  // namespace
 
-class AnnoyIndex {
-public:
-    enum class MetricType {
-        L2,
-        IP
-    };
+struct AnnoyIndex::Impl {
+    int dim_;
+    AnnoyIndex::MetricType metric_;
+    int n_trees_;
+    bool need_rebuild_;
+    std::unordered_set<int64_t> deleted_ids_;
+    std::unique_ptr<AnnoyL2Index> l2_index_;
+    std::unique_ptr<AnnoyIPIndex> ip_index_;
 
-    explicit AnnoyIndex(int dim, MetricType metric, int n_trees = 10)
+    Impl(int dim, AnnoyIndex::MetricType metric, int n_trees)
         : dim_(dim), metric_(metric), n_trees_(n_trees), need_rebuild_(false) {
         if (dim_ <= 0) {
             throw std::invalid_argument("AnnoyIndex dim must be positive");
         }
         create_index_by_metric();
+    }
+
+    void create_index_by_metric() {
+        if (metric_ == AnnoyIndex::MetricType::L2) {
+            l2_index_.reset(new AnnoyL2Index(dim_));
+            ip_index_.reset();
+        } else {
+            ip_index_.reset(new AnnoyIPIndex(dim_));
+            l2_index_.reset();
+        }
+    }
+
+    void rebuild_if_needed() {
+        if (!need_rebuild_) {
+            return;
+        }
+        char* error = nullptr;
+        bool ok = false;
+        if (metric_ == AnnoyIndex::MetricType::L2) {
+            ok = l2_index_->build(n_trees_, -1, &error);
+        } else {
+            ok = ip_index_->build(n_trees_, -1, &error);
+        }
+        if (!ok) {
+            throw std::runtime_error(error != nullptr ? error : "Annoy build failed");
+        }
+        need_rebuild_ = false;
     }
 
     void insert_vectors(const std::vector<float>& data, uint64_t label) {
@@ -52,7 +81,7 @@ public:
         const int64_t id = static_cast<int64_t>(label);
         char* error = nullptr;
         bool ok = false;
-        if (metric_ == MetricType::L2) {
+        if (metric_ == AnnoyIndex::MetricType::L2) {
             ok = l2_index_->add_item(id, data.data(), &error);
         } else {
             ok = ip_index_->add_item(id, data.data(), &error);
@@ -74,8 +103,8 @@ public:
     std::pair<std::vector<long>, std::vector<float>> search_vectors(
         const std::vector<float>& query,
         int k,
-        const roaring_bitmap_t* bitmap = nullptr,
-        int search_k = -1) {
+        const roaring_bitmap_t* bitmap,
+        int search_k) {
         if (k <= 0) {
             return {{}, {}};
         }
@@ -87,7 +116,7 @@ public:
         const int candidate_k = std::max(k * 4, k);
         std::vector<int64_t> annoy_ids;
         std::vector<float> annoy_distances;
-        if (metric_ == MetricType::L2) {
+        if (metric_ == AnnoyIndex::MetricType::L2) {
             l2_index_->get_nns_by_vector(query.data(), static_cast<size_t>(candidate_k), search_k, &annoy_ids, &annoy_distances);
         } else {
             ip_index_->get_nns_by_vector(query.data(), static_cast<size_t>(candidate_k), search_k, &annoy_ids, &annoy_distances);
@@ -118,7 +147,7 @@ public:
         rebuild_if_needed();
         char* error = nullptr;
         bool ok = false;
-        if (metric_ == MetricType::L2) {
+        if (metric_ == AnnoyIndex::MetricType::L2) {
             ok = l2_index_->save(file_path.c_str(), false, &error);
         } else {
             ok = ip_index_->save(file_path.c_str(), false, &error);
@@ -139,7 +168,7 @@ public:
         create_index_by_metric();
         char* error = nullptr;
         bool ok = false;
-        if (metric_ == MetricType::L2) {
+        if (metric_ == AnnoyIndex::MetricType::L2) {
             ok = l2_index_->load(file_path.c_str(), false, &error);
         } else {
             ok = ip_index_->load(file_path.c_str(), false, &error);
@@ -150,40 +179,36 @@ public:
         deleted_ids_.clear();
         need_rebuild_ = false;
     }
-
-private:
-    void create_index_by_metric() {
-        if (metric_ == MetricType::L2) {
-            l2_index_.reset(new AnnoyL2Index(dim_));
-            ip_index_.reset();
-        } else {
-            ip_index_.reset(new AnnoyIPIndex(dim_));
-            l2_index_.reset();
-        }
-    }
-
-    void rebuild_if_needed() {
-        if (!need_rebuild_) {
-            return;
-        }
-        char* error = nullptr;
-        bool ok = false;
-        if (metric_ == MetricType::L2) {
-            ok = l2_index_->build(n_trees_, -1, &error);
-        } else {
-            ok = ip_index_->build(n_trees_, -1, &error);
-        }
-        if (!ok) {
-            throw std::runtime_error(error != nullptr ? error : "Annoy build failed");
-        }
-        need_rebuild_ = false;
-    }
-
-    int dim_;
-    MetricType metric_;
-    int n_trees_;
-    bool need_rebuild_;
-    std::unordered_set<int64_t> deleted_ids_;
-    std::unique_ptr<AnnoyL2Index> l2_index_;
-    std::unique_ptr<AnnoyIPIndex> ip_index_;
 };
+
+AnnoyIndex::AnnoyIndex(int dim, MetricType metric, int n_trees)
+    : impl_(new Impl(dim, metric, n_trees)) {}
+
+AnnoyIndex::~AnnoyIndex() = default;
+
+AnnoyIndex::AnnoyIndex(AnnoyIndex&&) noexcept = default;
+AnnoyIndex& AnnoyIndex::operator=(AnnoyIndex&&) noexcept = default;
+
+void AnnoyIndex::insert_vectors(const std::vector<float>& data, uint64_t label) {
+    impl_->insert_vectors(data, label);
+}
+
+void AnnoyIndex::remove_vectors(const std::vector<long>& ids) {
+    impl_->remove_vectors(ids);
+}
+
+std::pair<std::vector<long>, std::vector<float>> AnnoyIndex::search_vectors(
+    const std::vector<float>& query,
+    int k,
+    const roaring_bitmap_t* bitmap,
+    int search_k) {
+    return impl_->search_vectors(query, k, bitmap, search_k);
+}
+
+void AnnoyIndex::saveIndex(const std::string& file_path) {
+    impl_->saveIndex(file_path);
+}
+
+void AnnoyIndex::loadIndex(const std::string& file_path) {
+    impl_->loadIndex(file_path);
+}

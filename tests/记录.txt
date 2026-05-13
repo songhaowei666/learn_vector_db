@@ -7,3 +7,24 @@
 [2026-05-13 20:11:48.444] [info] Throughput: 2273.5720375364854 operations per second
 [2026-05-13 20:11:48.444] [info] Overall recall rate: 0.04958000000000001
 [2026-05-13 20:11:48.453] [info] Benchmark test completed
+
+
+& ./annoy_mem_bench
+make: “annoy_mem_bench”已是最新。
+插入前（空索引已创建） VmRSS=3816 kB, VmHWM=3880 kB
+插入100万条后（尚未 build） VmRSS=561408 kB, VmHWM=561408 kB
+search 触发 build 完成后（可检索态） VmRSS=967904 kB, VmHWM=985828 kB
+--- 增量（相对插入前 VmRSS）---
+插入100万条后 VmRSS 增量: 557592 kB
+build 完成后 VmRSS 增量: 964088 kB
+插入阶段耗时: 0.189719 s
+
+
+song@song:~/github_clone/learn_vector_db/tests$ ./hnsw_mem_bench
+插入前（空索引已创建） VmRSS=49468 kB, VmHWM=49536 kB
+插入100万条后 VmRSS=743888 kB, VmHWM=743888 kB
+检索 k=1 后（与线上一致走 search 路径） VmRSS=743888 kB, VmHWM=743888 kB
+--- 增量（相对插入前 VmRSS）---
+插入100万条后 VmRSS 增量: 694420 kB
+检索后 VmRSS 增量: 694420 kB
+插入阶段耗时: 103.245 s
