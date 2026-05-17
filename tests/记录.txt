@@ -28,6 +28,23 @@ search 触发 build 完成后（可检索态） VmRSS=967904 kB, VmHWM=985828 kB
 build 完成后 VmRSS 增量: 964088 kB
 插入阶段耗时: 0.189719 s
 
+song@song:~/github_clone/learn_vector_db$ cd tests && make annoy_mem_bench && ./annoy_mem_bench
+make: “annoy_mem_bench”已是最新。
+插入前（空索引已创建） VmRSS=3808 kB, VmHWM=3872 kB
+插入100万条后（尚未 build） VmRSS=561400 kB, VmHWM=561400 kB
+构图（build）完成后 VmRSS=970356 kB, VmHWM=985704 kB
+首次检索 k=1 后 VmRSS=970356 kB, VmHWM=985704 kB
+--- 增量（相对插入前 VmRSS）---
+插入100万条后 VmRSS 增量: 557592 kB
+构图完成后 VmRSS 增量: 966548 kB
+首次检索后 VmRSS 增量: 966548 kB
+--- 耗时 ---
+插入阶段耗时: 0.180421 s
+构图阶段耗时: 16.4223 s
+首次检索耗时: 1.0264e-05 s
+插入+构图+检索总耗时: 16.6027 s
+线上等价首次 search（构图+检索）: 16.4223 s
+
 
 song@song:~/github_clone/learn_vector_db/tests$ ./hnsw_mem_bench
 插入前（空索引已创建） VmRSS=49468 kB, VmHWM=49536 kB

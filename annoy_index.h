@@ -26,6 +26,8 @@ public:
 
     void insert_vectors(const std::vector<float>& data, uint64_t label);
     void remove_vectors(const std::vector<long>& ids);
+    // 若存在未 build 的增量插入，则执行 Annoy build（与 search 内 rebuild_if_needed 一致）
+    void ensure_built();
     std::pair<std::vector<long>, std::vector<float>> search_vectors(
         const std::vector<float>& query,
         int k,

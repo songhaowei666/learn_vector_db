@@ -197,6 +197,10 @@ void AnnoyIndex::remove_vectors(const std::vector<long>& ids) {
     impl_->remove_vectors(ids);
 }
 
+void AnnoyIndex::ensure_built() {
+    impl_->rebuild_if_needed();
+}
+
 std::pair<std::vector<long>, std::vector<float>> AnnoyIndex::search_vectors(
     const std::vector<float>& query,
     int k,
