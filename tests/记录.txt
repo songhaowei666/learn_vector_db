@@ -1,12 +1,21 @@
 
 测试 p99延迟   平均延迟   系统吞吐量   召回率
 ./vector_db_test /home/song/github_clone/learn_vector_db/tests/conf.ini
-
+Flat索引的测试
 [2026-05-13 20:11:48.444] [info] Average duration: 0.43983651430000154 milliseconds
 [2026-05-13 20:11:48.444] [info] P99 duration: 1.958496 milliseconds
 [2026-05-13 20:11:48.444] [info] Throughput: 2273.5720375364854 operations per second
 [2026-05-13 20:11:48.444] [info] Overall recall rate: 0.04958000000000001
 [2026-05-13 20:11:48.453] [info] Benchmark test completed
+./hnsw_vector_db_test conf_hnsw.ini   
+HNSW索引的测试
+[2026-05-17 17:03:10.501] [info] Average duration: 0.27268572019999876 milliseconds
+[2026-05-17 17:03:10.501] [info] P99 duration: 0.527135 milliseconds
+[2026-05-17 17:03:10.501] [info] Throughput: 3667.2254024397002 operations per second
+[2026-05-17 17:03:10.501] [info] Overall recall rate: 0.05088000000000001
+[2026-05-17 17:03:10.509] [info] Benchmark test completed
+
+
 
 
 & ./annoy_mem_bench

@@ -16,3 +16,7 @@ WALStorage
 vdb_server
 .clangd
 compile_commands.json
+
+
+*.tar.gz
+srv.log.5

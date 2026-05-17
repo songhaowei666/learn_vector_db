@@ -2,8 +2,7 @@
 
 #include <faiss/Index.h>
 #include <faiss/utils/utils.h>
-// FAISS 1.7.x：IDSelector 定义在 AuxIndexStructures.h（无独立 IDSelector.h）
-#include <faiss/impl/AuxIndexStructures.h>
+#include <faiss/impl/IDSelector.h>
 #include <vector>
 
 typedef struct roaring_bitmap_s roaring_bitmap_t;
@@ -12,7 +11,7 @@ typedef struct roaring_bitmap_s roaring_bitmap_t;
 struct RoaringBitmapIDSelector : faiss::IDSelector {
     RoaringBitmapIDSelector(const roaring_bitmap_t* bitmap) : bitmap_(bitmap) {}
 
-    bool is_member(int64_t id) const final;
+    bool is_member(faiss::idx_t id) const final;
 
     ~RoaringBitmapIDSelector() override {}
 
